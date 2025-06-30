@@ -39,15 +39,17 @@ fn void callback_func(XWatcherFileEvent event,
 
 fn int main(String[] args)
 {
-	io::printn("Hello, World!");
+	io::printn("Hello, Watcher!");
 	XWatcher* watcher =  xwatcher::xcreate();
 	XWatcherReference ref;
-	ref.path = "C:\\Users\\thoma\\Desktop\\XWatcherBindings";
+	ref.path = "C:\\Users\\thoma\\Desktop\\XWatcherBindings\\.vscode";
 
 	ref.callback_func = &callback_func;
 	ref.context = 1;
-	// xwatcher::xappend_directory(watcher, &ref);
-	xwatcher::xstart(watcher);
+	
+	if(!xwatcher::xappend_directory(watcher, &ref)) return 1;
+	io::printfn("appended directory");
+	if(!xwatcher::xstart(watcher)) return 1;
 	libc::getchar();
 	xwatcher::xdestroy(watcher);
 	return 0;

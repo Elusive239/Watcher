@@ -43,7 +43,7 @@ struct XWatcherDirectory {
 	XWatcherCallbackFn callback_func;
 
 	Win32_PHANDLE     handle @if(env::WIN32);
-	Win32_LPOVERLAPPED overlapped @if(env::WIN32);
+	Win32_OVERLAPPED overlapped @if(env::WIN32);
 	char    *event_buffer @if(env::WIN32);
 	
 	int inotify_watch_fd @if(env::POSIX);
@@ -101,7 +101,7 @@ fn XWatcher *xcreate() {
 
 	$if env::POSIX : 
 		// NEED INOTIFY
-		// watcher.inotify_fd = inotify_init1(O_NONBLOCK);
+		watcher.inotify_fd = inotify_init1(O_NONBLOCK);
 		if(watcher.inotify_fd < 0) {
 			io::eprintn("inotify_init");
 			return null;
@@ -184,10 +184,12 @@ fn bool xappend_file(XWatcher* watcher, XWatcherReference* reference) {
 }
 
 fn bool xappend_directory(XWatcher* watcher, XWatcherReference* reference) {
-	char *path = allocator::new_array(mem, char, reference.path.len());
-	foreach(idx, char c : reference.path[: reference.path.len()]){
-		path[idx] = c;
-	}
+	char *path = allocator::new_array(mem, char, reference.path.len()+1);
+	// foreach(idx, char c : reference.path[: reference.path.len()]){
+	// 	path[idx] = c;
+	// }
+	path[0:reference.path.len()] = reference.path[0:reference.path.len()];
+	path[reference.path.len()] = 0;
 	// libc::strdup(reference.path);
 
 	// the file MUST NOT contain slashed at the end
@@ -267,8 +269,9 @@ fn bool xappend_directory(XWatcher* watcher, XWatcherReference* reference) {
 			}
 
 			// create event structure
-			dir.overlapped.hEvent = win32::createEventA(null, (Win32_BOOL)false, 0, null);
-			if(dir.overlapped.hEvent == null) {
+			// dir.overlapped.hEvent = 
+			Win32_HANDLE handle = win32::createEventA(null, (Win32_BOOL)false, 0, null);
+			if(handle == null) {
 				// get error code
 				Win32_DWORD error = win32::getLastError();
 				// char *message;
@@ -289,6 +292,8 @@ fn bool xappend_directory(XWatcher* watcher, XWatcherReference* reference) {
 
 				return false;
 			}
+			// is overlapped null?
+			dir.overlapped.hEvent = handle;
 
 			// allocate the event buffer
 			dir.event_buffer = mem::malloc(BUF_LEN);
@@ -303,7 +308,7 @@ fn bool xappend_directory(XWatcher* watcher, XWatcherReference* reference) {
 					FILE_NOTIFY_CHANGE_FILE_NAME  |
 					FILE_NOTIFY_CHANGE_DIR_NAME   |
 					FILE_NOTIFY_CHANGE_LAST_WRITE,
-					null, dir.overlapped, null);
+					null, &dir.overlapped, null);
 			if(!success) {
 				// get error code
 				Win32_DWORD error = win32::getLastError();
@@ -336,8 +341,8 @@ fn bool xappend_directory(XWatcher* watcher, XWatcherReference* reference) {
 
 fn bool xstart(XWatcher* watcher) {
 	watcher.alive = true;
-	watcher.thread_id = (Thread)1;
-	(void) watcher.thread_id.create(&internal_xWatcherProcess, watcher);
+	
+	watcher.thread_id.create(&internal_xWatcherProcess, watcher)!!;
 	
 	// possix::pthread_create(
 	// 		&watcher.thread,
@@ -345,12 +350,12 @@ fn bool xstart(XWatcher* watcher) {
 	// 		&internal_xWatcherProcess,
 	// 		watcher);
 	
-	if(watcher.thread_id != (Thread)0) {
-		io::eprint("pthread_create");
+	if(watcher.thread_id == (Thread)0) {
+		io::eprint("couldn't create a new thread...");
 		watcher.alive = false;
 		return false;
 	}
-
+	io::printfn("thread created...");
 	return true;
 }
 
@@ -360,12 +365,13 @@ fn void xdestroy(XWatcher* watcher) {
 	// $if env::POSIX : 
 	// 	posix::pthread_join(watcher.thread, &ret);
 	// $endif
-	(void) watcher.thread_id.join();
+	watcher.thread_id.join()!!;
 	foreach(dir : watcher.directories){
 		free_xdirectory(dir);
 	}
 	watcher.directories.free();
 	mem::free(watcher);
+	io::printfn("watcher destroyed...");
 }
 
 alias XWatcherFileList = list::List{XWatcherFile*};
@@ -444,6 +450,9 @@ extern fn Win32_BOOL readDirectoryChangesW(
 	void* // <- this is wrong... but what *is* 'LPOVERLAPPED_COMPLETION_ROUTINE' ?
 ) @extern("ReadDirectoryChangesW");
 
+extern fn Win32_INT wcstombs_s( usz* retval, char *dst, Win32_DWORD dstsz,
+                    Win32_WCHAR * src, Win32_DWORD len );
+
 fn int internal_xWatcherProcess(void *argument) {
 		XWatcher* watcher = (XWatcher*) argument;
 		XWatcherDirectory*[] directories = watcher.directories.to_array(mem);
@@ -485,7 +494,7 @@ fn int internal_xWatcherProcess(void *argument) {
 			// retrieve event data
 			Win32_DWORD bytes_transferred;
 			win32::getOverlappedResult(dir.handle,
-					dir.overlapped,
+					&dir.overlapped,
 					&bytes_transferred, (Win32_BOOL)false);
 
 			// assign the data's pointer to a proper format for convenience
@@ -496,15 +505,15 @@ fn int internal_xWatcherProcess(void *argument) {
 			for (;;) {
 				// figure out the wchar string size and allocate as needed
 				Win32_DWORD name_len = event.fileNameLength / Win32_WCHAR.sizeof;
-				// char *name_char = mem::malloc(char.sizeof*((long)name_len+1));
-				// usz converted_chars;
+				char *name_char = mem::malloc(char.sizeof*((long)name_len+1));
+				usz converted_chars;
 
 				// // convert wchar* filename to char*
-				// wcstombs_s(&converted_chars, name_char,
-				// 		name_len+1, event.fileName, name_len);
-				String tmp = string::from_wstring(mem, (WString) &( event.fileName[0]))!!;
-				char* name_char = tmp.ptr;
-				usz converted_chars = tmp.len;
+				wcstombs_s(&converted_chars, name_char,
+						name_len+1, event.fileName, name_len);
+				// String tmp = string::from_wstring(mem, (WString) &( event.fileName[0]))!!;
+				// char* name_char = tmp.ptr;
+				// usz converted_chars = tmp.len;
 
 				// convert to proper event type
 				XWatcherFileEvent send_event = XWatcherFileEvent.NONE;
@@ -598,7 +607,7 @@ fn int internal_xWatcherProcess(void *argument) {
 					(Win32_BOOL)recursive,
 					dwNotifyFilter,
 					null,
-					dir.overlapped,
+					&dir.overlapped,
 					null);
 
 			if(!success) {
