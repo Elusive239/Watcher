@@ -27,7 +27,7 @@ struct XWatcher {
 	PThread  thread;
 	Thread        thread_id;
 	bool       alive;
-	int inotify_fd @if(env::POSIX); // fd == file descriptor (a common UNIX thing)
+	int inotify_fd @if(env::LINUX); // fd == file descriptor (a common UNIX thing)
 }
 
 struct XWatcherDirectory {
@@ -46,7 +46,7 @@ struct XWatcherDirectory {
 	Win32_OVERLAPPED overlapped @if(env::WIN32);
 	char    *event_buffer @if(env::WIN32);
 	
-	int inotify_watch_fd @if(env::POSIX);
+	int inotify_watch_fd @if(env::LINUX);
 }
 
 struct XWatcherReference {
@@ -86,7 +86,7 @@ fn XWatcher *xcreate() {
 	XWatcher *watcher = mem::new(XWatcher);
 	watcher.directories.init(mem);
 
-	$if env::POSIX : 
+	$if env::LINUX : 
 		// NEED INOTIFY
 		watcher.inotify_fd = inotify_init1(O_NONBLOCK);
 		if(watcher.inotify_fd < 0) {
@@ -148,7 +148,7 @@ fn bool xappend_file     (XWatcher* watcher, XWatcherReference* reference) {
 		dir.additional_data =null;
 		dir.path= (ZString) path;
 		$switch:
-			$case env::POSIX :
+			$case env::LINUX :
 				dir.inotify_watch_fd = -1;
 			$case env::WIN32 :
 				dir.handle       = null;
@@ -184,7 +184,7 @@ fn bool xappend_file     (XWatcher* watcher, XWatcherReference* reference) {
 	file = new_file;
 
 	$switch:
-			$case env::POSIX :
+			$case env::LINUX :
 				if(!dir.inotify_add_watch()) return false;
 			$case env::WIN32 :
 				if(!dir.createFile()) return false;
@@ -228,7 +228,7 @@ fn bool xappend_directory(XWatcher* watcher, XWatcherReference* reference) {
 		dir.init_with_reference(reference);
 		dir.files.init(mem);
 		$switch:
-			$case env::POSIX :
+			$case env::LINUX :
 				if(!dir.inotify_add_watch()) return false;
 			$case env::WIN32 :
 				if(!dir.createFile()) return false;
@@ -329,7 +329,7 @@ fn XWatcherDirectory* XWatcher.fetch_directory(XWatcher* watcher, String path) {
 fn bool xstart(XWatcher* watcher) {
 	watcher.alive = true;
 	
-	watcher.thread_id.create(&internal_xWatcherProcess, watcher)!!;
+	watcher.thread_id.create(&internal_xwatcher_process, watcher)!!;
 	
 	if(watcher.thread_id == (Thread)0) {
 		io::eprint("couldn't create a new thread...");
@@ -361,7 +361,7 @@ struct FileNotifyInformation {
   Win32_DWORD nextEntryOffset;
   Win32_DWORD action;
   Win32_DWORD fileNameLength;
-  Win32_WCHAR* fileName;
+  Win32_WCHAR[1] fileName;
 } 
 
 const CUInt FILE_ACTION_ADDED            = 0x00000001;
@@ -424,145 +424,139 @@ extern fn Win32_BOOL readDirectoryChangesW(
 ) @extern("ReadDirectoryChangesW");
 
 
-fn int internal_xWatcherProcess(void *argument) {
-		io::printfn("PROBLEM STILL HERE ( %d > %s) PROBABLY", $$LINE, $$FILE);
-		XWatcher* watcher = (XWatcher*) argument;
-		XWatcherDirectory*[] directories = watcher.directories.to_array(mem);
+fn int internal_xwatcher_process(void *argument) {
+	XWatcher* watcher = (XWatcher*) argument;
+	XWatcherDirectory*[] directories = watcher.directories.array_view();
 
-		// create an event list so we can still make use of the Windows API
-		Win32_PHANDLE[] events = allocator::new_array(mem, Win32_PHANDLE, directories.len);
-		for(usz i = 0; i < directories.len; i++) {
-			events[i] = directories[i].overlapped.hEvent;
+	// create an event list so we can still make use of the Windows API
+	Win32_PHANDLE[] events = allocator::new_array(mem, Win32_PHANDLE, directories.len);
+	for(usz i = 0; i < directories.len; i++) {
+		events[i] = directories[i].overlapped.hEvent;
+	}
+
+	while(watcher.alive) {
+		// wait for any of the objects to respond
+		Win32_DWORD result = win32::waitForMultipleObjects(
+			directories.len,
+			events, 
+			(Win32_BOOL)false, 
+			50 /* timeout of 50ms */
+		);
+
+		// test which object was it
+		int object_index = -1;
+		for(int i = 0; i < directories.len; i++) {
+			if(result == (win32::WAIT_OBJECT_0 + i)) {
+				object_index = i;
+				break;
+			}
 		}
 
-		// obv first check if we need to stay alive
-		while(watcher.alive) {
-			// wait for any of the objects to respond
-			Win32_DWORD result = win32::waitForMultipleObjects(directories.len,
-					events, (Win32_BOOL)false, 50 );/* timeout of 50ms */
+		if(object_index == -1) {
+			if(result == win32::WAIT_TIMEOUT) {
+				// it just timed out, let's continue
+					//me-> maybe we yield?
+				continue;
+			} else {
+				// RUNTIME ERROR! Let's bail
+				io::printfn("Runtime Error! Bailing!");
+				win32::exitThread(win32::getLastError());
+			}
+		}
 
-			// test which object was it
-			int object_index = -1;
-			for(int i = 0; i < directories.len; i++) {
-				if(result == (win32::WAIT_OBJECT_0 + i)) {
-					object_index = i;
+		// shorhand for convenience
+		XWatcherDirectory *dir = directories[object_index];
+		// retrieve event data
+		Win32_DWORD bytes_transferred;
+		win32::getOverlappedResult(
+			dir.handle,
+			&dir.overlapped,
+			&bytes_transferred, 
+			(Win32_BOOL)false
+		);
+
+		// assign the data's pointer to a proper format for convenience
+		FileNotifyInformation *event = (FileNotifyInformation*) dir.event_buffer;
+
+		// loop through the data
+		DString tmp;
+		tmp.init(mem);
+		@pool_init(mem, BUF_LEN, BUF_LEN){ 
+		for (;;)  {
+			defer tmp.clear();
+			String converted_name = string::from_wstring(mem, (WString) &(event.fileName[0]))!!;
+			tmp.append(converted_name);
+			converted_name.free(mem);
+			tmp.append_char('\0'); //null terminate!
+
+			ZString name_char = (ZString) (tmp.str_view().ptr);
+			usz converted_chars = tmp.str_view().len;
+
+			// convert to proper event type
+			XWatcherFileEvent send_event = XWatcherFileEvent.NONE;
+			switch (event.action) {
+				case FILE_ACTION_ADDED:
+					send_event = XWatcherFileEvent.CREATED;
 					break;
-				}
-			}
-
-			if(object_index == -1) {
-				if(result == win32::WAIT_TIMEOUT) {
-					// it just timed out, let's continue
-						//me-> maybe we yield?
-					continue;
-				} else {
-					// RUNTIME ERROR! Let's bail
-					io::printfn("Runtime Error! Bailing!");
-					win32::exitThread(win32::getLastError());
-				}
-			}
-
-			// shorhand for convenience
-			XWatcherDirectory *dir = directories[object_index];
-
-			// retrieve event data
-			Win32_DWORD bytes_transferred;
-			win32::getOverlappedResult(dir.handle,
-					&dir.overlapped,
-					&bytes_transferred, (Win32_BOOL)false);
-
-			// assign the data's pointer to a proper format for convenience
-			FileNotifyInformation *event = (FileNotifyInformation*)
-					dir.event_buffer;
-
-			// loop through the data
-			for (;;) {
-				// figure out the wchar string size and allocate as needed
-				// Win32_DWORD name_len = event.fileNameLength / Win32_WCHAR.sizeof;
-				// char *name_char = mem::malloc(char.sizeof*((long)name_len+1));
-				// usz converted_chars;
-
-				// // convert wchar* filename to char*
-				// wcstombs_s(&converted_chars, name_char,
-						// name_len+1, event.fileName, name_len);
-				String tmp = string::from_utf16(mem,event.fileName[:event.fileNameLength])!!;
-				char* name_char = tmp.ptr;
-				usz converted_chars = tmp.len;
-
-				// convert to proper event type
-				XWatcherFileEvent send_event = XWatcherFileEvent.NONE;
-				switch (event.action) {
-					case FILE_ACTION_ADDED:
-						send_event = XWatcherFileEvent.CREATED;
-						break;
-					case FILE_ACTION_REMOVED:
-						send_event = XWatcherFileEvent.REMOVED;
-						break;
-					case FILE_ACTION_MODIFIED:
-						send_event = XWatcherFileEvent.MODIFIED;
-						break;
-					case FILE_ACTION_RENAMED_OLD_NAME:
-					case FILE_ACTION_RENAMED_NEW_NAME:
-						send_event = XWatcherFileEvent.RENAMED;
-						break;
-					default:
-						send_event = XWatcherFileEvent.UNSPECIFIED;
-						break;
-				}
-
-				// find matching file (if any)
-				XWatcherFile *file = null;
-				for(usz j = 0; j < dir.files.len(); j++) {
-					if(libc::strcmp(dir.files[j].name, (ZString)name_char) == 0) {
-						file = dir.files[j];
-					}
-				}
-
-				// file found(?)
-				if(file != null) {
-					if(send_event != XWatcherFileEvent.NONE) {
-						// figure out the file path size
-						usz filepath_size = libc::strlen(dir.path);
-						filepath_size += libc::strlen(file.name);
-						filepath_size += 2;
-
-						// create file path string
-						char *filepath = (char*)mem::malloc(filepath_size);
-						libc::snprintf(filepath, filepath_size, "%s%c%s",
-								dir.path, DIRBRK, file.name);
-
-						// callback
-						file.callback_func(send_event,
-											(ZString)filepath,
-											file.context,
-											file.additional_data);
-
-						// free that garbage
-						free(filepath);
-					}
-				} else {
-					// Cannot find file, lets try directory
-					if(dir.callback_func != null &&
-							send_event != XWatcherFileEvent.NONE) {
-						dir.callback_func(send_event,
-								dir.path,
-								dir.context,
-								dir.additional_data);
-					}
-				}
-
-				// free up the converted string
-				mem::free(name_char);
-
-				// Are there more events to handle?
-				if (event.nextEntryOffset) {
-					*((char**)&event) += event.nextEntryOffset;
-				} else {
+				case FILE_ACTION_REMOVED:
+					send_event = XWatcherFileEvent.REMOVED;
 					break;
+				case FILE_ACTION_MODIFIED:
+					send_event = XWatcherFileEvent.MODIFIED;
+					break;
+				case FILE_ACTION_RENAMED_OLD_NAME:
+				case FILE_ACTION_RENAMED_NEW_NAME:
+					send_event = XWatcherFileEvent.RENAMED;
+					break;
+				default:
+					send_event = XWatcherFileEvent.UNSPECIFIED;
+					break;
+			}
+
+			// find matching file (if any)
+			XWatcherFile *file = null;
+			for(usz j = 0; j < dir.files.len(); j++) {
+				if(dir.files[j].name == name_char ) {
+					file = dir.files[j];
 				}
 			}
 
-			Win32_DWORD dwNotifyFilter =
+			// file found(?)
+			if(file != null) {
+				if(send_event != XWatcherFileEvent.NONE) {
+					// figure out the file path size
+					usz filepath_size = dir.path.len() + file.name.len() + 2;
+					// create file path string
+					char *filepath = (char*)mem::malloc(filepath_size);
+					defer mem::free(filepath); // free that garbage
+					libc::snprintf(filepath, filepath_size, "%s%c%s",
+							dir.path, DIRBRK, file.name);
+					// callback
+					file.callback_func(send_event,
+										(ZString)filepath,
+										file.context,
+										file.additional_data);
+				}
+			}else {
+				// Cannot find file, lets try directory
+				if(dir.callback_func != null &&
+						send_event != XWatcherFileEvent.NONE) {
+					dir.callback_func(
+						send_event,
+						dir.path,
+						dir.context,
+						dir.additional_data
+					);
+				}
+			}
+			// Are there more events to handle?
+			if (event.nextEntryOffset) {
+				*((char**)&event) += event.nextEntryOffset;
+			} else {
+				break;
+			}
+		}};
+		Win32_DWORD dwNotifyFilter =
 					FILE_NOTIFY_CHANGE_FILE_NAME |
 					FILE_NOTIFY_CHANGE_DIR_NAME |
 					FILE_NOTIFY_CHANGE_ATTRIBUTES |
@@ -571,47 +565,35 @@ fn int internal_xWatcherProcess(void *argument) {
 					FILE_NOTIFY_CHANGE_LAST_ACCESS |
 					FILE_NOTIFY_CHANGE_CREATION |
 					FILE_NOTIFY_CHANGE_SECURITY;
-			bool recursive = false;
+		bool recursive = false;
 
-			// Queue the next event
-			bool success = (bool) readDirectoryChangesW(
-					dir.handle,
-					dir.event_buffer,
-					BUF_LEN,
-					(Win32_BOOL)recursive,
-					dwNotifyFilter,
-					null,
-					&dir.overlapped,
-					null);
-
-			if(!success) {
-				// get error code
-				Win32_DWORD error = win32::getLastError();
-				io::eprintf("readDirectoryChangesW failed: %d\n", error);
-				win32::exitThread(error);
-			}
+		// Queue the next event
+		bool success = (bool) readDirectoryChangesW(
+			dir.handle,
+			dir.event_buffer,
+			BUF_LEN,
+			(Win32_BOOL)recursive,
+			dwNotifyFilter,
+			null,
+			&dir.overlapped,
+			null
+		);
+		if(!success) {
+			// get error code
+			Win32_DWORD error = win32::getLastError();
+			io::eprintf("readDirectoryChangesW failed: %d\n", error);
+			win32::exitThread(error);
 		}
-		// cleanup time
-			//me-> do we switch to using an Arena? Fast cleanup...
-		for(usz i = 0; i < watcher.directories.len(); i++) {
-			XWatcherDirectory *directory = watcher.directories[i];
-			for(usz j = 0; j < directory.files.len(); j++) {
-				XWatcherFile *file = directory.files[j];
-				mem::free(file.name);
-			}
-			directory.files.free();
-			mem::free(directory.path);
-			mem::free(directory.event_buffer);
-			win32::closeHandle(directory.handle);
-		}
-		watcher.directories.free();
-		mem::free(events);
-		mem::free(directories);
-		return 0;
 	}
+	//cleanup here (TBD)... arena allocator looking nice rn..
+	for(usz i = 0; i < watcher.directories.len(); i++) {
+		XWatcherDirectory *directory = watcher.directories[i];
+		win32::closeHandle(directory.handle);
+	}
+	return 0;
+}
 
-
-module xwatcher @if(env::POSIX);
+module xwatcher @if(env::LINUX);
 import std::os::posix;
 import inotify;
 

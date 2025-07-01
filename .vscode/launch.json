@@ -12,7 +12,6 @@
             "program": "${workspaceFolder}\\build\\XWatcherBindings.exe",
             "args": [],
             "stopAtEntry": false,
-            
             "cwd": "${workspaceFolder}",
             "environment": [],
             "console": "integratedTerminal",

@@ -36,7 +36,7 @@ fn void callback_func(XWatcherFileEvent event,
 	}
 
 	dstr.appendf("%s with context %d\n", path, context);
-	file::save("output.test", dstr.str_view())!!;
+	io::printf("%s",dstr);
 }
 
 
