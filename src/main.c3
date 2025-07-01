@@ -5,35 +5,38 @@ import libc;
 
 fn void callback_func(XWatcherFileEvent event,
 		ZString path, int context, void *data) {
-
+			DString dstr;
+			defer dstr.free();
+			dstr.init(mem);
 	switch(event) {
 		case XWatcherFileEvent.UNSPECIFIED:
-			io::printf("Unspecified event for ");
+			dstr.append("Unspecified event for ");
 			break;
 		case XWatcherFileEvent.CREATED:
-			io::printf("File creation event for ");
+			dstr.append("File creation event for ");
 			break;
 		case XWatcherFileEvent.REMOVED:
-			io::printf("File removal event for ");
+			dstr.append("File removal event for ");
 			break;
 		case XWatcherFileEvent.OPENED:
-			io::printf("File open event for ");
+			dstr.append("File open event for ");
 			break;
 		case XWatcherFileEvent.ATTRIBUTES_CHANGED:
-			io::printf("File attribute changed event for ");
+			dstr.append("File attribute changed event for ");
 			break;
 		case XWatcherFileEvent.MODIFIED:
-			io::printf("File modification event for ");
+			dstr.append("File modification event for ");
 			break;
 		case XWatcherFileEvent.RENAMED:
-			io::printf("File renaming event for ");
+			dstr.append("File renaming event for ");
 			break;
 		default:
-			io::printf("Unhandled event for ");
+			dstr.append("Unhandled event for ");
 			break;
 	}
 
-	io::printf("%s with context %d\n", path, context);
+	dstr.appendf("%s with context %d\n", path, context);
+	file::save("output.test", dstr.str_view())!!;
 }
 
 
@@ -42,13 +45,13 @@ fn int main(String[] args)
 	io::printn("Hello, Watcher!");
 	XWatcher* watcher =  xwatcher::xcreate();
 	XWatcherReference ref;
-	ref.path = "C:\\Users\\thoma\\Desktop\\XWatcherBindings\\.vscode";
+	ref.path = "C:\\Users\\thoma\\Desktop\\XWatcherBindings\\.vscode\\";
 
 	ref.callback_func = &callback_func;
 	ref.context = 1;
 	
-	if(!xwatcher::xappend_directory(watcher, &ref)) return 1;
-	io::printfn("appended directory");
+	if(!xwatcher::xappend_reference(watcher, &ref)) return 1;
+	io::printfn("appended something");
 	if(!xwatcher::xstart(watcher)) return 1;
 	libc::getchar();
 	xwatcher::xdestroy(watcher);

@@ -5,12 +5,14 @@
     "version": "0.2.0",
     "configurations": [
         {
+
             "name": "MSVC debugger for C3",
             "type": "cppvsdbg",
             "request": "launch",
             "program": "${workspaceFolder}\\build\\XWatcherBindings.exe",
             "args": [],
             "stopAtEntry": false,
+            
             "cwd": "${workspaceFolder}",
             "environment": [],
             "console": "integratedTerminal",
