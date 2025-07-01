@@ -40,16 +40,19 @@ fn int internal_xwatcher_process(void *argument) {
 				if(directories[j].inotify_watch_fd == event.wd) {
 					directory = directories[j];
 				}
+				io::printfn("Got fd %d Expected fd %d", directories[j].inotify_watch_fd ,  event.wd);
 			}
 
 			if(!directory){
 				io::eprintn("MATCHING FILE DESCRIPTOR NOT FOUND! ERROR!");
+				continue;
 				// BAIL????
 					//me. do we bail tho?
 			}
 
 			// find matching file (if any)
 			XWatcherFile *file = null;
+			
 			for(usz j = 0; j < directory.files.len(); j++) {
 				usz test_file_name_len = directory.files[j].name.len();
 				if(event.len != test_file_name_len) {continue;}
