@@ -62,6 +62,8 @@ fn int internal_xwatcher_process(void *argument) {
 				}
 			}
 
+			io::printfn("Found File %s", file ? file : "NULL");
+
 			XWatcherFileEvent send_event = XWatcherFileEvent.NONE;
 			switch{
 				case (bool) (event.mask & inotify::IN_CREATE):
