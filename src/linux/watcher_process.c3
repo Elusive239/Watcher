@@ -52,12 +52,12 @@ fn int internal_xwatcher_process(void *argument) {
 
 			// find matching file (if any)
 			XWatcherFile *file = null;
-			
+			ZString name = (ZString) event.name;
 			for(usz j = 0; j < directory.files.len(); j++) {
 				usz test_file_name_len = directory.files[j].name.len();
-				io::printfn("TESTING %d against %d", test_file_name_len,event.len);
+				io::printfn("TESTING %d against %d", test_file_name_len,name.len());
 				if(event.len != test_file_name_len) {continue;}
-				else if(directory.files[j].name[0:test_file_name_len] == event.name[0:test_file_name_len] ) {
+				else if(directory.files[j].name[0:test_file_name_len] == name[0:name.len()] ) {
 					file = directory.files[j];
 					break;
 				}
