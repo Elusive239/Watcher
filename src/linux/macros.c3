@@ -1,4 +1,6 @@
 module xwatcher;
+import inotify;
+import std::iol;
 
 macro bool XWatcherDirectory.inotify_add_watch(&dir) {
 	dir.inotify_watch_fd = inotify::inotify_add_watch( watcher.inotify_fd, dir.path, IN_ALL_EVENTS);

@@ -5,6 +5,7 @@ import libc;
 import std::os::win32;
 import std::os::posix;
 import std::thread;
+import inotify;
 
 macro todo(String $str = "") {
 	$if  $str.len > 0:
@@ -85,7 +86,7 @@ fn XWatcher *create_watcher() {
 
 	$if env::LINUX : 
 		// NEED INOTIFY
-		watcher.inotify_fd = inotify_init1(O_NONBLOCK);
+		watcher.inotify_fd = inotify::inotify_init1(O_NONBLOCK);
 		if(watcher.inotify_fd < 0) {
 			io::eprintn("inotify_init");
 			return null;
@@ -273,7 +274,7 @@ fn bool XWatcher.start(XWatcher* watcher) {
 	
 	watcher.thread_id.create(&internal_xwatcher_process, watcher)!!;
 	
-	if(watcher.thread_id == (Thread)0) {
+	if(!watcher.thread_id) {
 		io::eprint("couldn't create a new thread...");
 		watcher.alive = false;
 		return false;
