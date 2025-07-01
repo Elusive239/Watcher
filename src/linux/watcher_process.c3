@@ -26,7 +26,7 @@ fn int internal_xwatcher_process(void *argument) {
 		}
 
 		// wait for the kernel to do it's thing
-		length = libc::read(watcher.inotify_fd, buffer, BUF_LEN);
+		length = libc::read(watcher.inotify_fd, (void*)(&buffer[0]), BUF_LEN);
 
 		usz i;
 		while(i < length){
@@ -52,7 +52,7 @@ fn int internal_xwatcher_process(void *argument) {
 			for(usz j = 0; j < directory.files.len(); j++) {
 				usz test_file_name_len = directory.files[j].name.len();
 				if(event.len != test_file_name_len) {continue;}
-				else if(directory.files[j].name[0:test_file_name_len] == name_char[0:test_file_name_len] ) {
+				else if(directory.files[j].name[0:test_file_name_len] == event.name[0:test_file_name_len] ) {
 					file = directory.files[j];
 					break;
 				}
@@ -66,7 +66,8 @@ fn int internal_xwatcher_process(void *argument) {
 					send_event = XWatcherFileEvent.MODIFIED;
 				case  (bool) (event.mask & inotify::IN_DELETE):
 					send_event = XWatcherFileEvent.REMOVED;
-				case  (bool) (event.mask & inotify::IN_CLOSE_WRITE ||  (bool) event.mask & inotify::IN_CLOSE_NOWRITE):
+				case  (bool) (event.mask & inotify::IN_CLOSE_WRITE):
+				case  (bool) (event.mask & inotify::IN_CLOSE_NOWRITE):
 					send_event = XWatcherFileEvent.REMOVED;
 				case  (bool) (event.mask & inotify::IN_ATTRIB):
 					send_event = XWatcherFileEvent.ATTRIBUTES_CHANGED;
@@ -92,7 +93,7 @@ fn int internal_xwatcher_process(void *argument) {
 				}
 			}else {
 				// Cannot find file, lets try directory
-				if(directory.callback_func != NULL &&
+				if(directory.callback_func != null &&
 						send_event != XWATCHER_FILE_NONE) {
 					directory.callback_func(send_event,
 							directory.path,
@@ -107,7 +108,7 @@ fn int internal_xwatcher_process(void *argument) {
 	foreach(XWatcherDirectory *directory : watcher.directories){
 		inotify::inotify_rm_watch(watcher.inotify_fd, directory.inotify_watch_fd);
 	}
-	libc::close(watcher.inotify_id);
+	libc::close(watcher.inotify_fd);
 
 	return 0;
 }

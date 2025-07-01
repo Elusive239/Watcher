@@ -6,6 +6,7 @@ import std::os::win32;
 import std::os::posix;
 import std::thread;
 import inotify;
+import std::net::os;
 
 macro todo(String $str = "") {
 	$if  $str.len > 0:
@@ -238,7 +239,7 @@ fn bool append_directory(XWatcher* watcher, XWatcherReference* reference) {
 		dir.files.init(mem, initial_capacity:1);
 		$switch:
 			$case env::LINUX :
-				if(!dir.inotify_add_watch(watch.inotify_fd)) return false;
+				if(!dir.inotify_add_watch(watcher.inotify_fd)) return false;
 			$case env::WIN32 :
 				if(!dir.createFile()) return false;
 				if(!dir.create_event()) return false;
