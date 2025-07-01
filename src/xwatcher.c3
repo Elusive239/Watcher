@@ -291,7 +291,9 @@ fn void destroy_watcher(XWatcher* watcher) {
 			mem::free(file.name);
 			mem::free(file);
 		}
+		$if env::LINUX :
 		if(dir.event_buffer) mem::free(dir.event_buffer);
+		$endif 
 		dir.files.free();
 		mem::free(dir.path);
 		mem::free(dir);
