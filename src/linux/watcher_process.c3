@@ -40,11 +40,11 @@ fn int internal_xwatcher_process(void *argument) {
 				if(directories[j].inotify_watch_fd == event.wd) {
 					directory = directories[j];
 				}
-				io::printfn("Got fd %d Expected fd %d", directories[j].inotify_watch_fd ,  event.wd);
+				// io::printfn("Got fd %d Expected fd %d", directories[j].inotify_watch_fd ,  event.wd);
 			}
 
 			if(!directory){
-				io::eprintn("MATCHING FILE DESCRIPTOR NOT FOUND! ERROR!");
+				// io::eprintn("MATCHING FILE DESCRIPTOR NOT FOUND! ERROR!");
 				continue;
 				// BAIL????
 					//me. do we bail tho?
