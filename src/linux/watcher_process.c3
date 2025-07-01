@@ -8,7 +8,6 @@ const CInt EVENT_SIZE  = (INotifyEvent.sizeof);
 const CInt BUF_LEN     = (1024 * (EVENT_SIZE + 16));
 const char DIRBRK      = '/';
 
-
 fn int internal_xwatcher_process(void *argument) {
 	XWatcher* watcher = (XWatcher*) argument;
 	char[BUF_LEN] buffer;
@@ -27,12 +26,7 @@ fn int internal_xwatcher_process(void *argument) {
 		}
 
 		// wait for the kernel to do it's thing
-		length = os::read(watcher.inotify_fd, buffer, BUF_LEN);
-		if(length < 0) {
-			// something messed up clearly
-			perror("read");
-			return NULL;
-		}
+		length = libc::read(watcher.inotify_fd, buffer, BUF_LEN);
 
 		usz i;
 		while(i < length){
@@ -57,7 +51,7 @@ fn int internal_xwatcher_process(void *argument) {
 			XWatcherFile *file = null;
 			for(usz j = 0; j < directory.files.len(); j++) {
 				usz test_file_name_len = directory.files[j].name.len();
-				if(event.name.len() != test_file_name_len) {continue;}
+				if(event.len != test_file_name_len) {continue;}
 				else if(directory.files[j].name[0:test_file_name_len] == name_char[0:test_file_name_len] ) {
 					file = directory.files[j];
 					break;
@@ -66,17 +60,17 @@ fn int internal_xwatcher_process(void *argument) {
 
 			XWatcherFileEvent send_event = XWatcherFileEvent.NONE;
 			switch{
-				case (event.mask & inotify::IN_CREATE):
+				case (bool) (event.mask & inotify::IN_CREATE):
 					send_event = XWATCHER_FILE_CREATED;
-				case (event.mask & inotify::IN_MODIFY):
+				case  (bool) (event.mask & inotify::IN_MODIFY):
 					send_event = XWatcherFileEvent.MODIFIED;
-				case (event.mask & inotify::IN_DELETE):
+				case  (bool) (event.mask & inotify::IN_DELETE):
 					send_event = XWatcherFileEvent.REMOVED;
-				case (event.mask & inotify::IN_CLOSE_WRITE || event.mask & inotify::IN_CLOSE_NOWRITE):
+				case  (bool) (event.mask & inotify::IN_CLOSE_WRITE ||  (bool) event.mask & inotify::IN_CLOSE_NOWRITE):
 					send_event = XWatcherFileEvent.REMOVED;
-				case (event.mask & inotify::IN_ATTRIB):
+				case  (bool) (event.mask & inotify::IN_ATTRIB):
 					send_event = XWatcherFileEvent.ATTRIBUTES_CHANGED;
-				case (event.mask & inotify::IN_OPEN):
+				case  (bool) (event.mask & inotify::IN_OPEN):
 					send_event = XWatcherFileEvent.OPENED;
 			}
 
@@ -88,11 +82,11 @@ fn int internal_xwatcher_process(void *argument) {
 					// create file path string
 					char *filepath = (char*)malloc(filepath_size);
 					defer mem::free(filepath);
-					snprintf(filepath, filepath_size, "%s/%s",
+					libc::snprintf(filepath, filepath_size, "%s/%s",
 							directory.path, file.name);
 					// callback
 					file.callback_func(send_event,
-										filepath,
+										(ZString)filepath,
 										file.context,
 										file.additional_data);
 				}
@@ -113,6 +107,7 @@ fn int internal_xwatcher_process(void *argument) {
 	foreach(XWatcherDirectory *directory : watcher.directories){
 		inotify::inotify_rm_watch(watcher.inotify_fd, directory.inotify_watch_fd);
 	}
-	os::close(watcher.inotify_id);
+	libc::close(watcher.inotify_id);
+
 	return 0;
 }

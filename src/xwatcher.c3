@@ -86,7 +86,7 @@ fn XWatcher *create_watcher() {
 
 	$if env::LINUX : 
 		// NEED INOTIFY
-		watcher.inotify_fd = inotify::inotify_init1(O_NONBLOCK);
+		watcher.inotify_fd = inotify::inotify_init1(os::O_NONBLOCK);
 		if(watcher.inotify_fd < 0) {
 			io::eprintn("inotify_init");
 			return null;
@@ -194,7 +194,7 @@ fn bool append_file     (XWatcher* watcher, XWatcherReference* reference) {
 	file = new_file;
 	$switch:
 			$case env::LINUX :
-				if(!dir.inotify_add_watch()) return false;
+				if(!dir.inotify_add_watch(watcher.inotify_fd)) return false;
 			$case env::WIN32 :
 				if(!dir.createFile()) return false;
 
@@ -238,7 +238,7 @@ fn bool append_directory(XWatcher* watcher, XWatcherReference* reference) {
 		dir.files.init(mem, initial_capacity:1);
 		$switch:
 			$case env::LINUX :
-				if(!dir.inotify_add_watch()) return false;
+				if(!dir.inotify_add_watch(watch.inotify_fd)) return false;
 			$case env::WIN32 :
 				if(!dir.createFile()) return false;
 				if(!dir.create_event()) return false;
@@ -274,11 +274,11 @@ fn bool XWatcher.start(XWatcher* watcher) {
 	
 	watcher.thread_id.create(&internal_xwatcher_process, watcher)!!;
 	
-	if(!watcher.thread_id) {
-		io::eprint("couldn't create a new thread...");
-		watcher.alive = false;
-		return false;
-	}
+	// if(!watcher.thread_id) {
+	// 	io::eprint("couldn't create a new thread...");
+	// 	watcher.alive = false;
+	// 	return false;
+	// }
 	io::printfn("thread created...");
 	return true;
 }
@@ -291,7 +291,7 @@ fn void destroy_watcher(XWatcher* watcher) {
 			mem::free(file.name);
 			mem::free(file);
 		}
-		$if env::LINUX :
+		$if env::WIN32 :
 		if(dir.event_buffer) mem::free(dir.event_buffer);
 		$endif 
 		dir.files.free();
