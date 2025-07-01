@@ -55,6 +55,7 @@ fn int internal_xwatcher_process(void *argument) {
 			
 			for(usz j = 0; j < directory.files.len(); j++) {
 				usz test_file_name_len = directory.files[j].name.len();
+				io::printfn("TESTING %s against %s", directory.files[j].name,event.name);
 				if(event.len != test_file_name_len) {continue;}
 				else if(directory.files[j].name[0:test_file_name_len] == event.name[0:test_file_name_len] ) {
 					file = directory.files[j];
@@ -62,7 +63,7 @@ fn int internal_xwatcher_process(void *argument) {
 				}
 			}
 
-			io::printfn("Found File %s", file);
+			// io::printfn("Found File %s", file);
 
 			XWatcherFileEvent send_event = XWatcherFileEvent.NONE;
 			switch{
