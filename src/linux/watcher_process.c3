@@ -61,7 +61,7 @@ fn int internal_xwatcher_process(void *argument) {
 			XWatcherFileEvent send_event = XWatcherFileEvent.NONE;
 			switch{
 				case (bool) (event.mask & inotify::IN_CREATE):
-					send_event = XWATCHER_FILE_CREATED;
+					send_event = XWatcherFileEvent.CREATED;
 				case  (bool) (event.mask & inotify::IN_MODIFY):
 					send_event = XWatcherFileEvent.MODIFIED;
 				case  (bool) (event.mask & inotify::IN_DELETE):
@@ -94,7 +94,7 @@ fn int internal_xwatcher_process(void *argument) {
 			}else {
 				// Cannot find file, lets try directory
 				if(directory.callback_func != null &&
-						send_event != XWATCHER_FILE_NONE) {
+						send_event != XWatcherFileEvent.NONE) {
 					directory.callback_func(send_event,
 							directory.path,
 							directory.context,
