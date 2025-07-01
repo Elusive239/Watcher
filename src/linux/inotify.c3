@@ -1,12 +1,8 @@
 module inotify @if(env::POSIX);
 
-enum INotifyEventFlag : CInt {
-    IN_CLOEXEC = 02000000,
-// #define IN_CLOEXEC IN_CLOEXEC
-    IN_NONBLOCK = 04000
-// #define IN_NONBLOCK IN_NONBLOCK
-}
-
+typedef INotifyEventFlag = CInt;
+const INotifyEventFlag IN_CLOEXEC   = 02000000;
+const INotifyEventFlag IN_NONBLOCK  = 04000;
 
 /* Structure describing an inotify event.  */
 struct INotifyEvent{
