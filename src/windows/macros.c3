@@ -35,7 +35,7 @@ macro bool XWatcherDirectory.create_event(&dir) {
 
 macro bool XWatcherDirectory.allocate_event_buffer(&dir) {
 	// allocate the event buffer
-	dir.event_buffer = calloc(BUF_LEN);
+	dir.event_buffer = mem::calloc(BUF_LEN);
 	if(dir.event_buffer == null) {
 		io::eprintf( "calloc failed at %s:$s!\n", $$FILE, $$LINE);
 		return false;

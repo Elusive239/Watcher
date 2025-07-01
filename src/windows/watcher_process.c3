@@ -10,12 +10,13 @@ fn int internal_xwatcher_process(void *argument) {
 	XWatcherDirectory*[] directories = watcher.directories.array_view();
 
 	// create an event list so we can still make use of the Windows API
-	Win32_PHANDLE[] events = allocator::new_array(mem, Win32_PHANDLE, directories.len);
+    @pool_init(mem, BUF_LEN, BUF_LEN){ 
+
+	Win32_PHANDLE[] events = allocator::new_array(tmem, Win32_PHANDLE, directories.len);
 	for(usz i = 0; i < directories.len; i++) {
 		events[i] = directories[i].overlapped.hEvent;
 	}
 
-    @pool_init(mem, BUF_LEN, BUF_LEN){ 
 	while(watcher.alive) {
 		// wait for any of the objects to respond
 		Win32_DWORD result = win32::waitForMultipleObjects(
@@ -62,12 +63,12 @@ fn int internal_xwatcher_process(void *argument) {
 
 		// loop through the data
 		DString tmp;
-		tmp.init(mem);
+		tmp.init(tmem);
 		for (;;)  {
 			defer tmp.clear();
-			String converted_name = string::from_wstring(mem, (WString) &(event.fileName[0]))!!;
+			String converted_name = string::from_wstring(tmem, (WString) &(event.fileName[0]))!!;
 			tmp.append(converted_name);
-			converted_name.free(mem);
+			converted_name.free(tmem);
 			tmp.append_char('\0'); //null terminate!
 
 			ZString name_char = (ZString) (tmp.str_view().ptr);
@@ -102,8 +103,6 @@ fn int internal_xwatcher_process(void *argument) {
 				else if(dir.files[j].name[0:test_file_name_len] == name_char[0:test_file_name_len] ) {
 					file = dir.files[j];
 					break;
-				}else{
-					io::printfn("FAIL: '%s' != '%s'", dir.files[j].name, name_char);
 				}
 			}
 

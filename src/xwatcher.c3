@@ -64,7 +64,7 @@ struct XWatcherReference {
 	void *additional_data;
 }
 
-struct XWatcherFile {
+struct XWatcherFile (Printable) {
 	// just the file name alone
 	ZString name;
 	// used for adding (additional) context in the handler (if needed)
@@ -79,9 +79,9 @@ fn usz? XWatcherFile.to_format(&this, Formatter *formatter) @dynamic {
 	return formatter.printf("%s", this.name)!;
 }
 
-fn XWatcher *xcreate() {
-	XWatcher *watcher = mem::new(XWatcher);
-	watcher.directories.init(mem);
+fn XWatcher *create_watcher() {
+	XWatcher *watcher = mem::new(XWatcher); 
+	watcher.directories.init(mem,initial_capacity:1);
 
 	$if env::LINUX : 
 		// NEED INOTIFY
@@ -94,7 +94,19 @@ fn XWatcher *xcreate() {
 	return watcher;
 }
 
-fn bool xappend_reference(XWatcher* watcher, XWatcherReference* reference) {
+<*
+	@require $typeof(path).typeid == ZString.typeid || $typeof(path).typeid == String.typeid
+*>
+macro bool XWatcher.watch(XWatcher* watcher, path, XWatcherCallbackFn callback_func = null, int context = 1) {
+	XWatcherReference ref = {
+		.path = (ZString) path,
+		.callback_func = callback_func,
+		.context = context,
+	};
+	return append_reference(watcher, &ref);
+}
+
+fn bool append_reference(XWatcher* watcher, XWatcherReference* reference) {
 	Path? path = reference.path.str_view().to_path(mem);
 	defer (void) path.free();
 	if(catch err = path) {
@@ -103,16 +115,16 @@ fn bool xappend_reference(XWatcher* watcher, XWatcherReference* reference) {
 	}
 
 	if(path::is_dir(path)){
-		return xappend_directory(watcher,reference);
+		return append_directory(watcher,reference);
 	}else if (path::is_file(path)){
 		// todo("I'm working on it, m'kay?");
-		return xappend_file     (watcher,reference);
+		return append_file     (watcher,reference);
 	}
 
 	return false;
 }
 
-fn bool xappend_file     (XWatcher* watcher, XWatcherReference* reference) {
+fn bool append_file     (XWatcher* watcher, XWatcherReference* reference) {
 	String path = reference.path.str_view().copy(mem);
 	//don't need to check for front slash here.. presumably...
 
@@ -139,7 +151,7 @@ fn bool xappend_file     (XWatcher* watcher, XWatcherReference* reference) {
 
 	// directory exists, check if an callback has been already added
 	if(!dir) {
-		dir = mem::new(XWatcherDirectory);
+		dir = mem::new( XWatcherDirectory);
 		dir.callback_func   =null; 
 		dir.context         =0 ;
 		dir.additional_data =null;
@@ -152,7 +164,7 @@ fn bool xappend_file     (XWatcher* watcher, XWatcherReference* reference) {
 			$default:
 				todo("This playform is currently unsupported...");
 		$endswitch
-		dir.files.init(mem);
+		dir.files.init(mem,initial_capacity:1);
 		watcher.directories.push(dir);
 	}
 
@@ -172,7 +184,7 @@ fn bool xappend_file     (XWatcher* watcher, XWatcherReference* reference) {
 	XWatcherFile* new_file = mem::new(XWatcherFile);
 	// avoid an invalid free because this shares the memory space
 	// of the full path string
-	new_file.name            = (ZString) filename.copy(mem);
+	new_file.name            = (ZString) filename;
 	new_file.context         = reference.context;
 	new_file.additional_data = reference.additional_data;
 	new_file.callback_func   = reference.callback_func;
@@ -198,7 +210,7 @@ fn bool xappend_file     (XWatcher* watcher, XWatcherReference* reference) {
 	return true;	
 }
 
-fn bool xappend_directory(XWatcher* watcher, XWatcherReference* reference) {
+fn bool append_directory(XWatcher* watcher, XWatcherReference* reference) {
 	String path = reference.path.str_view().copy(mem);
 	
 	// inotify only works with directories that do NOT have a front-slash
@@ -222,7 +234,7 @@ fn bool xappend_directory(XWatcher* watcher, XWatcherReference* reference) {
 
 		dir.path = (ZString)path;
 		dir.init_with_reference(reference);
-		dir.files.init(mem);
+		dir.files.init(mem, initial_capacity:1);
 		$switch:
 			$case env::LINUX :
 				if(!dir.inotify_add_watch()) return false;
@@ -256,7 +268,7 @@ fn XWatcherDirectory* XWatcher.fetch_directory(XWatcher* watcher, String path) {
 	return dir;
 }
 
-fn bool xstart(XWatcher* watcher) {
+fn bool XWatcher.start(XWatcher* watcher) {
 	watcher.alive = true;
 	
 	watcher.thread_id.create(&internal_xwatcher_process, watcher)!!;
@@ -270,9 +282,20 @@ fn bool xstart(XWatcher* watcher) {
 	return true;
 }
 
-fn void xdestroy(XWatcher* watcher) {
+fn void destroy_watcher(XWatcher* watcher) {
 	watcher.alive = false;
 	if(catch err = watcher.thread_id.join()) err?!!;
-	if(watcher) mem::free(watcher);
+	foreach(XWatcherDirectory* dir : watcher.directories){
+		foreach(XWatcherFile* file : dir.files){
+			mem::free(file.name);
+			mem::free(file);
+		}
+		if(dir.event_buffer) mem::free(dir.event_buffer);
+		dir.files.free();
+		mem::free(dir.path);
+		mem::free(dir);
+	}
+	watcher.directories.free();
+	mem::free(watcher);
 	io::printfn("watcher destroyed...");
 }

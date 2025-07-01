@@ -40,20 +40,17 @@ fn void callback_func(XWatcherFileEvent event,
 }
 
 
-fn int main(String[] args)
+fn int main(String[] args) 
 {
 	io::printn("Hello, Watcher!");
-	XWatcher* watcher =  xwatcher::xcreate();
-	XWatcherReference ref;
-	ref.path = "C:\\Users\\thoma\\Desktop\\XWatcherBindings\\.vscode\\settings.json";
-
-	ref.callback_func = &callback_func;
-	ref.context = 1;
-	
-	if(!xwatcher::xappend_reference(watcher, &ref)) return 1;
+	XWatcher* watcher =  xwatcher::create_watcher();
+	defer xwatcher::destroy_watcher(watcher);
+	if(!watcher.watch("C:\\Users\\thoma\\Desktop\\XWatcherBindings\\.vscode\\settings.json", &callback_func, 1)) return 1;
 	io::printfn("appended something");
-	if(!xwatcher::xstart(watcher)) return 1;
-	libc::getchar();
-	xwatcher::xdestroy(watcher);
+	if(!watcher.start()) return 1;
+	if(args.len != 0) libc::getchar();
 	return 0;
 }
+
+//just checks and sees if the example doesn't free all of the memory
+fn void test_mem() @test => main({});
