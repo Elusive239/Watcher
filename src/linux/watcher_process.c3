@@ -13,6 +13,7 @@ fn int internal_xwatcher_process(void *argument) {
 	char[BUF_LEN] buffer;
 	usz length;
 	XWatcherDirectory*[] directories = watcher.directories.array_view();
+	@pool_init(mem, BUF_LEN, BUF_LEN){ 
 	while(watcher.alive){
 		Posix_pollfd pfd = {.fd = watcher.inotify_fd,.events = os::POLLIN, .revents = 0};
 		int ret = os::poll(&pfd, 1, 50);  // timeout of 50ms
@@ -105,6 +106,7 @@ fn int internal_xwatcher_process(void *argument) {
 			i += (ulong) EVENT_SIZE + event.len;
 		}
 	}	
+	};
 	foreach(XWatcherDirectory *directory : watcher.directories){
 		inotify::inotify_rm_watch(watcher.inotify_fd, directory.inotify_watch_fd);
 	}
