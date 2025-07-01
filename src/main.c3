@@ -45,7 +45,7 @@ fn int main(String[] args)
 	io::printn("Hello, Watcher!");
 	XWatcher* watcher =  xwatcher::xcreate();
 	XWatcherReference ref;
-	ref.path = "C:\\Users\\thoma\\Desktop\\XWatcherBindings\\.vscode\\";
+	ref.path = "C:\\Users\\thoma\\Desktop\\XWatcherBindings\\.vscode\\settings.json";
 
 	ref.callback_func = &callback_func;
 	ref.context = 1;
