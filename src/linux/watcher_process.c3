@@ -56,7 +56,7 @@ fn int internal_xwatcher_process(void *argument) {
 			for(usz j = 0; j < directory.files.len(); j++) {
 				usz test_file_name_len = directory.files[j].name.len();
 				io::printfn("TESTING %d against %d", test_file_name_len,name.len());
-				if(event.len != test_file_name_len) {continue;}
+				if(name.len() != test_file_name_len) {continue;}
 				else if(directory.files[j].name[0:test_file_name_len] == name[0:name.len()] ) {
 					file = directory.files[j];
 					break;
