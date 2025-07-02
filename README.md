@@ -1,6 +1,6 @@
 # NoirWatcher (NAME PENDING)
 
-A filesystem watcher written in [C3](https://c3-lang.org/), based off of [XWatcher](https://github.com/nikp123/x-watcher/tree/main) (created by [nikp123](https://github.com/nikp123)). 
+A filesystem watcher written in [C3](https://c3-lang.org/), based off of [XWatcher](https://github.com/nikp123/x-watcher/tree/main) (created by [nikp123](https://github.com/nikp123)), a filesystem watcher written in C. 
 
 ## Supported Platforms:  
 [#] Windows!  
