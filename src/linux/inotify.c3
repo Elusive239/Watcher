@@ -10,7 +10,7 @@ struct INotifyEvent{
   CUInt mask;        /* Watch mask.  */
   CUInt cookie;        /* Cookie to synchronize two events.  */
   CUInt len;                /* Length (including NULs) of name.  */
-  char *name;        /* Name.  */ //was "char name __flexarr"
+  char[1] name;        /* Name.  */ //was "char name __flexarr"
 }
 
 // (void)
