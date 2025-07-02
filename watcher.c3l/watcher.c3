@@ -1,12 +1,11 @@
 module watcher;
-import std::collections;
 import std::io;
-import libc;
+import std::thread;
+import std::collections;
 import std::os::win32;
 import std::os::posix;
-import std::thread;
-import inotify;
 import std::net::os;
+import inotify;
 
 macro todo(String $str = "") {
 	$if  $str.len > 0:
@@ -95,14 +94,25 @@ fn Watcher *create_watcher() {
 }
 
 <*
-	@require $typeof(path).typeid == ZString.typeid || $typeof(path).typeid == String.typeid
+	@require $typeof(path).typeid == ZString.typeid || $typeof(path).typeid == String.typeid || $defined(path.str_view)
 *>
 macro bool Watcher.watch(Watcher* watcher, path, WatcherCallbackFn callback_func = null, int context = 1) {
+	//back out early if the watcher is awake, prevents a crash..
+	if(watcher.alive) return false;
+
+	$if $defined(path.str_view) == true:
+	WatcherReference ref = {
+		.path = (ZString) path.str_view(),
+		.callback_func = callback_func,
+		.context = context,
+	};
+	$else 
 	WatcherReference ref = {
 		.path = (ZString) path,
 		.callback_func = callback_func,
 		.context = context,
 	};
+	$endif
 	return append_reference(watcher, &ref);
 }
 
@@ -294,14 +304,12 @@ fn WatcherDirectory* Watcher.fetch_directory(Watcher* watcher, String path) {
 fn bool Watcher.start(Watcher* watcher) {
 	watcher.alive = true;
 	
-	watcher.thread_id.create(&internal_watcher_process, watcher)!!;
-	
-	// if(!watcher.thread_id) {
-	// 	io::eprint("couldn't create a new thread...");
-	// 	watcher.alive = false;
-	// 	return false;
-	// }
-	io::printfn("thread created...");
+	if(catch watcher.thread_id.create(&internal_watcher_process, watcher)) {
+		io::eprint("couldn't create a new thread...");
+		watcher.alive = false;
+		return false;
+	}
+
 	return true;
 }
 
@@ -322,7 +330,6 @@ fn void destroy_watcher(Watcher* watcher) {
 	}
 	watcher.directories.free();
 	mem::free(watcher);
-	io::printfn("watcher destroyed...");
 }
 
 module watcher @if(env::WIN32);
