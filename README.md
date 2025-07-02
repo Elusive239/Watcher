@@ -1,15 +1,17 @@
-# ___ Watcher (NAME PENDING)
+# NoirWatcher (NAME PENDING)
 
-A filesystem watcher written in C3, based off of [XWatcher](https://github.com/nikp123/x-watcher/tree/main) created by [nikp123](https://github.com/nikp123). 
+A filesystem watcher written in [C3](https://c3-lang.org/), based off of [XWatcher](https://github.com/nikp123/x-watcher/tree/main) (created by [nikp123](https://github.com/nikp123)). 
 
-Supported Platforms:  
-[X] Windows!
-[X] Linux!
-[O] Anything Else!
+## Supported Platforms:  
+[#] Windows!  
+[#] Linux!  
+[-] Anything Else!  
 
-Dependencies:  
-- C3 Standrd Library
-- Linux Only: gcc-multilib
+If someone wished to *add support* for another platform I would be obliged to add it here... 
+
+## Dependencies:  
+- C3 Standrd Library  
+- Linux Only: gcc-multilib  
 
 ## Thanks!
 
