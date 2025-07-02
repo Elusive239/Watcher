@@ -87,7 +87,7 @@ fn Watcher *create_watcher() {
 
 	$if env::LINUX : 
 		// NEED INOTIFY
-		watcher.inotify_fd = inotify::inotify_init1(os::O_NONBLOCK);
+		watcher.inotify_fd = inotify::init1(os::O_NONBLOCK);
 		if(watcher.inotify_fd < 0) {
 			io::eprintn("inotify_init");
 			return null;

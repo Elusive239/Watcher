@@ -28,9 +28,15 @@
   // "target": "windows-x64",
   // Targets.
   "targets": {
-    "XWatcherBindings": {
+    "windows64": {
       // Executable or library.
       "type": "executable",
+      // Additional libraries, sources
+      // and overrides of global settings here.
+    },"linux64": {
+      // Executable or library.
+      "type": "executable",
+      "target": "linux-x64",
       // Additional libraries, sources
       // and overrides of global settings here.
     },

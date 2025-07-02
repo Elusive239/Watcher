@@ -1,6 +1,6 @@
 # ___ Watcher (NAME PENDING)
 
-A filesystem watcher written in C3, based off of [XWatcher](LINKHERE) created by [NAMEHER](LINKHERE). 
+A filesystem watcher written in C3, based off of [XWatcher](https://github.com/nikp123/x-watcher/tree/main) created by [nikp123](https://github.com/nikp123). 
 
 Supported Platforms:  
 [X] Windows!

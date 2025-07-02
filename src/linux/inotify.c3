@@ -14,13 +14,13 @@ struct INotifyEvent{
 }
 
 // (void)
-extern fn CInt inotify_init ();
+extern fn CInt init () @extern("inotify_init");
 //int __flags
-extern fn CInt inotify_init1 (CInt);
+extern fn CInt init1 (CInt) @extern("inotify_init1");
 //int __fd, const char *__name, uint32_t __mask
-extern fn CInt inotify_add_watch (CInt , ZString, CUInt );
+extern fn CInt add_watch (CInt , ZString, CUInt ) @extern("inotify_add_watch");
 // int __fd, int __wd
-extern fn int inotify_rm_watch (CInt, CInt);
+extern fn int  rm_watch (CInt, CInt) @extern("inotify_rm_watch");
 
 /* Supported events suitable for MASK parameter of INOTIFY_ADD_WATCH.  */
 const CUInt IN_ACCESS      =   0x00000001;        /* File was accessed.  */

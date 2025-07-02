@@ -111,7 +111,7 @@ fn int internal_watcher_process(void *argument) {
 	}	
 	};
 	foreach(WatcherDirectory *directory : watcher.directories){
-		inotify::inotify_rm_watch(watcher.inotify_fd, directory.inotify_watch_fd);
+		inotify::rm_watch(watcher.inotify_fd, directory.inotify_watch_fd);
 	}
 	libc::close(watcher.inotify_fd);
 
