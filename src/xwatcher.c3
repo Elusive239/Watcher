@@ -1,4 +1,4 @@
-module xwatcher;
+module watcher;
 import std::collections;
 import std::io;
 import libc;
@@ -16,11 +16,11 @@ macro todo(String $str = "") {
 	$endif
 }
 
-alias XWatcherFileList = list::List{XWatcherFile*};
-alias XWatcherDirectoryList = list::List{XWatcherDirectory*};
-alias XWatcherCallbackFn = fn void( XWatcherFileEvent event, ZString path, int context, void* additional_data);
+alias WatcherFileList = list::List{WatcherFile*};
+alias WatcherDirectoryList = list::List{WatcherDirectory*};
+alias WatcherCallbackFn = fn void( WatcherFileEvent event, ZString path, int context, void* additional_data);
 
-enum XWatcherFileEvent : usz {
+enum WatcherFileEvent : usz {
 	UNSPECIFIED,
 	REMOVED,
 	CREATED,
@@ -32,17 +32,17 @@ enum XWatcherFileEvent : usz {
 	// probs more but i couldn't care much
 }
 
-struct XWatcher {
-	XWatcherDirectoryList directories;
+struct Watcher {
+	WatcherDirectoryList directories;
 	void*  thread; //pthread, check uses..
 	Thread        thread_id;
 	bool       alive;
 	int inotify_fd @if(env::LINUX); // fd == file descriptor (a common UNIX thing)
 }
 
-struct XWatcherDirectory {
+struct WatcherDirectory {
 	// list of files
-	XWatcherFileList files;
+	WatcherFileList files;
 
 	ZString         path;
 	// used for adding (additional) context in the handler (if needed)
@@ -50,7 +50,7 @@ struct XWatcherDirectory {
 	// in case you'd like to avoid global variables
 	void          *additional_data;
 
-	XWatcherCallbackFn callback_func;
+	WatcherCallbackFn callback_func;
 
 	Win32_PHANDLE     handle @if(env::WIN32);
 	Win32_OVERLAPPED overlapped @if(env::WIN32);
@@ -59,14 +59,14 @@ struct XWatcherDirectory {
 	int inotify_watch_fd @if(env::LINUX);
 }
 
-struct XWatcherReference {
+struct WatcherReference {
 	ZString path;
-	XWatcherCallbackFn callback_func;
+	WatcherCallbackFn callback_func;
 	int context;
 	void *additional_data;
 }
 
-struct XWatcherFile (Printable) {
+struct WatcherFile (Printable) {
 	// just the file name alone
 	ZString name;
 	// used for adding (additional) context in the handler (if needed)
@@ -74,15 +74,15 @@ struct XWatcherFile (Printable) {
 	// in case you'd like to avoid global variables
 	void *additional_data;
 
-	XWatcherCallbackFn callback_func;
+	WatcherCallbackFn callback_func;
 }
 
-fn usz? XWatcherFile.to_format(&this, Formatter *formatter) @dynamic {
+fn usz? WatcherFile.to_format(&this, Formatter *formatter) @dynamic {
 	return formatter.printf("%s", this.name)!;
 }
 
-fn XWatcher *create_watcher() {
-	XWatcher *watcher = mem::new(XWatcher); 
+fn Watcher *create_watcher() {
+	Watcher *watcher = mem::new(Watcher); 
 	watcher.directories.init(mem,initial_capacity:1);
 
 	$if env::LINUX : 
@@ -99,8 +99,8 @@ fn XWatcher *create_watcher() {
 <*
 	@require $typeof(path).typeid == ZString.typeid || $typeof(path).typeid == String.typeid
 *>
-macro bool XWatcher.watch(XWatcher* watcher, path, XWatcherCallbackFn callback_func = null, int context = 1) {
-	XWatcherReference ref = {
+macro bool Watcher.watch(Watcher* watcher, path, WatcherCallbackFn callback_func = null, int context = 1) {
+	WatcherReference ref = {
 		.path = (ZString) path,
 		.callback_func = callback_func,
 		.context = context,
@@ -108,7 +108,7 @@ macro bool XWatcher.watch(XWatcher* watcher, path, XWatcherCallbackFn callback_f
 	return append_reference(watcher, &ref);
 }
 
-fn bool append_reference(XWatcher* watcher, XWatcherReference* reference) {
+fn bool append_reference(Watcher* watcher, WatcherReference* reference) {
 	Path? path = reference.path.str_view().to_path(mem);
 	defer (void) path.free();
 	if(catch err = path) {
@@ -126,7 +126,7 @@ fn bool append_reference(XWatcher* watcher, XWatcherReference* reference) {
 	return false;
 }
 
-fn bool append_file     (XWatcher* watcher, XWatcherReference* reference) {
+fn bool append_file     (Watcher* watcher, WatcherReference* reference) {
 	String path = reference.path.str_view().copy(mem);
 	//don't need to check for front slash here.. presumably...
 
@@ -149,11 +149,11 @@ fn bool append_file     (XWatcher* watcher, XWatcherReference* reference) {
 		filename = path;
 	}
 
-	XWatcherDirectory* dir = watcher.fetch_directory(path);
+	WatcherDirectory* dir = watcher.fetch_directory(path);
 
 	// directory exists, check if an callback has been already added
 	if(!dir) {
-		dir = mem::new( XWatcherDirectory);
+		dir = mem::new( WatcherDirectory);
 		dir.callback_func   =null; 
 		dir.context         =0 ;
 		dir.additional_data =null;
@@ -171,7 +171,7 @@ fn bool append_file     (XWatcher* watcher, XWatcherReference* reference) {
 	}
 
 	// search for the file
-	XWatcherFile *file = null;
+	WatcherFile *file = null;
 	for(usz i = 0; i < dir.files.len(); i++) {
 		if(dir.files[i].name == filename) {
 			file = dir.files[i];
@@ -183,7 +183,7 @@ fn bool append_file     (XWatcher* watcher, XWatcherReference* reference) {
 		return false; // file already exists, that's an ERROR
 	}
 
-	XWatcherFile* new_file = mem::new(XWatcherFile);
+	WatcherFile* new_file = mem::new(WatcherFile);
 	// avoid an invalid free because this shares the memory space
 	// of the full path string
 	new_file.name            = (ZString) filename;
@@ -212,14 +212,14 @@ fn bool append_file     (XWatcher* watcher, XWatcherReference* reference) {
 	return true;	
 }
 
-fn bool append_directory(XWatcher* watcher, XWatcherReference* reference) {
+fn bool append_directory(Watcher* watcher, WatcherReference* reference) {
 	String path = reference.path.str_view().copy(mem);
 	
 	// inotify only works with directories that do NOT have a front-slash
 	// at the end, so we have to make sure to cut that out
 	if(path[path.len-1] == DIRBRK) path[path.len-1] = '\0';
 
-	XWatcherDirectory* dir = watcher.fetch_directory(path);
+	WatcherDirectory* dir = watcher.fetch_directory(path);
 
 	// directory exists, check if an callback has been already added
 	if(dir) {
@@ -232,7 +232,7 @@ fn bool append_directory(XWatcher* watcher, XWatcherReference* reference) {
 
 		dir.init_with_reference(reference);
 	} else{
-		dir = mem::new(XWatcherDirectory);
+		dir = mem::new(WatcherDirectory);
 
 		dir.path = (ZString)path;
 		dir.init_with_reference(reference);
@@ -254,14 +254,14 @@ fn bool append_directory(XWatcher* watcher, XWatcherReference* reference) {
 	return true;
 }
 
-macro void XWatcherDirectory.init_with_reference(&dir, XWatcherReference* reference) {
+macro void WatcherDirectory.init_with_reference(&dir, WatcherReference* reference) {
 	dir.callback_func   = reference.callback_func;
 	dir.context         = reference.context;
 	dir.additional_data = reference.additional_data;
 }
 
-fn XWatcherDirectory* XWatcher.fetch_directory(XWatcher* watcher, String path) {
-	XWatcherDirectory* dir = null;
+fn WatcherDirectory* Watcher.fetch_directory(Watcher* watcher, String path) {
+	WatcherDirectory* dir = null;
 	// check against the database of (pre-existing) directories
 	for(usz i=0; i < watcher.directories.len(); i++) {
 		// paths match
@@ -270,10 +270,10 @@ fn XWatcherDirectory* XWatcher.fetch_directory(XWatcher* watcher, String path) {
 	return dir;
 }
 
-fn bool XWatcher.start(XWatcher* watcher) {
+fn bool Watcher.start(Watcher* watcher) {
 	watcher.alive = true;
 	
-	watcher.thread_id.create(&internal_xwatcher_process, watcher)!!;
+	watcher.thread_id.create(&internal_watcher_process, watcher)!!;
 	
 	// if(!watcher.thread_id) {
 	// 	io::eprint("couldn't create a new thread...");
@@ -284,11 +284,11 @@ fn bool XWatcher.start(XWatcher* watcher) {
 	return true;
 }
 
-fn void destroy_watcher(XWatcher* watcher) {
+fn void destroy_watcher(Watcher* watcher) {
 	watcher.alive = false;
 	if(catch err = watcher.thread_id.join()) err?!!;
-	foreach(XWatcherDirectory* dir : watcher.directories){
-		foreach(XWatcherFile* file : dir.files){
+	foreach(WatcherDirectory* dir : watcher.directories){
+		foreach(WatcherFile* file : dir.files){
 			mem::free(file.name);
 			mem::free(file);
 		}

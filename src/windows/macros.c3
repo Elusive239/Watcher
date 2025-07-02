@@ -1,8 +1,8 @@
-module xwatcher @if(env::WIN32);
+module watcher @if(env::WIN32);
 import std::io;
 import std::os::win32;
 
-macro bool XWatcherDirectory.createFile(&dir) {
+macro bool WatcherDirectory.createFile(&dir) {
 	// add directory path
 	dir.handle = win32::createFileA(
 			(ichar*)dir.path, //probably unsafe....
@@ -21,7 +21,7 @@ macro bool XWatcherDirectory.createFile(&dir) {
 	return true;
 }
 
-macro bool XWatcherDirectory.create_event(&dir) {
+macro bool WatcherDirectory.create_event(&dir) {
 	// create event structure
 	dir.overlapped.hEvent = win32::createEventA(null, (Win32_BOOL) false, 0, null);
 	if(dir.overlapped.hEvent == null) {
@@ -33,7 +33,7 @@ macro bool XWatcherDirectory.create_event(&dir) {
 	return true;
 }
 
-macro bool XWatcherDirectory.allocate_event_buffer(&dir) {
+macro bool WatcherDirectory.allocate_event_buffer(&dir) {
 	// allocate the event buffer
 	dir.event_buffer = mem::calloc(BUF_LEN);
 	if(dir.event_buffer == null) {
@@ -43,7 +43,7 @@ macro bool XWatcherDirectory.allocate_event_buffer(&dir) {
 	return true;
 }
 
-macro bool XWatcherDirectory.set_reading_params(&dir) {
+macro bool WatcherDirectory.set_reading_params(&dir) {
 	// set reading params
 	bool success = (bool) readDirectoryChangesW(
 			dir.handle, dir.event_buffer, BUF_LEN, (Win32_BOOL) true,

@@ -1,33 +1,33 @@
 module main;
-import xwatcher;
+import watcher;
 import std::io;
 import libc;
 
-fn void callback_func(XWatcherFileEvent event,
+fn void callback_func(WatcherFileEvent event,
 		ZString path, int context, void *data) {
 			DString dstr;
 			defer dstr.free();
 			dstr.init(mem);
 	switch(event) {
-		case XWatcherFileEvent.UNSPECIFIED:
+		case WatcherFileEvent.UNSPECIFIED:
 			dstr.append("Unspecified event for ");
 			break;
-		case XWatcherFileEvent.CREATED:
+		case WatcherFileEvent.CREATED:
 			dstr.append("File creation event for ");
 			break;
-		case XWatcherFileEvent.REMOVED:
+		case WatcherFileEvent.REMOVED:
 			dstr.append("File removal event for ");
 			break;
-		case XWatcherFileEvent.OPENED:
+		case WatcherFileEvent.OPENED:
 			dstr.append("File open event for ");
 			break;
-		case XWatcherFileEvent.ATTRIBUTES_CHANGED:
+		case WatcherFileEvent.ATTRIBUTES_CHANGED:
 			dstr.append("File attribute changed event for ");
 			break;
-		case XWatcherFileEvent.MODIFIED:
+		case WatcherFileEvent.MODIFIED:
 			dstr.append("File modification event for ");
 			break;
-		case XWatcherFileEvent.RENAMED:
+		case WatcherFileEvent.RENAMED:
 			dstr.append("File renaming event for ");
 			break;
 		default:
@@ -43,8 +43,8 @@ fn void callback_func(XWatcherFileEvent event,
 fn int main(String[] args) 
 {
 	io::printn("Hello, Watcher!");
-	XWatcher* watcher =  xwatcher::create_watcher();
-	defer xwatcher::destroy_watcher(watcher);
+	Watcher* watcher =  watcher::create_watcher();
+	defer watcher::destroy_watcher(watcher);
 	if(!watcher.watch("C:\\Users\\thoma\\Desktop\\XWatcherBindings\\.vscode\\settings.json", &callback_func, 1)) return 1;
 	io::printfn("appended something");
 	if(!watcher.start()) return 1;

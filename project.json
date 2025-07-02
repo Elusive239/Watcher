@@ -8,13 +8,13 @@
   // Libraries to use for all targets.
   // "dependencies": [ "xwatcher"],
   // Authors, optionally with email.
-  "authors": [ "John Doe <john.doe@example.com>" ],
+  "authors": [ "Elusive <github.com/Elusive239>", "Ash indigo <github.com/ashindigo>" ],
   // Version using semantic versioning.
   "version": "0.1.0",
   // Sources compiled for all targets.
   "sources": [ "src/**" ],
   // Test sources compiled for all targets.
-  "test-sources": [ "test/**" ],
+  "test-sources": [ "src/**" ], //NO REAL TESTING YET
   // C sources if the project also compiles C sources
   // relative to the project file.
   // "c-sources": [ "csource/**" ],

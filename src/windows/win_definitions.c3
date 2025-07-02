@@ -1,4 +1,4 @@
-module xwatcher @if(env::WIN32);
+module watcher @if(env::WIN32);
 import std::os::win32;
 
 //Winnt.h // https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-file_notify_information

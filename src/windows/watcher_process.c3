@@ -1,13 +1,13 @@
-module xwatcher @if(env::WIN32);
+module watcher @if(env::WIN32);
 import std::os::win32;
 import std::io;
 
 const CInt BUF_LEN     = 1024;
 const char DIRBRK      = '\\';
 
-fn int internal_xwatcher_process(void *argument) {
-	XWatcher* watcher = (XWatcher*) argument;
-	XWatcherDirectory*[] directories = watcher.directories.array_view();
+fn int internal_watcher_process(void *argument) {
+	Watcher* watcher = (Watcher*) argument;
+	WatcherDirectory*[] directories = watcher.directories.array_view();
 
 	// create an event list so we can still make use of the Windows API
     @pool_init(mem, BUF_LEN, BUF_LEN){ 
@@ -48,7 +48,7 @@ fn int internal_xwatcher_process(void *argument) {
 		}
 
 		// shorhand for convenience
-		XWatcherDirectory *dir = directories[object_index];
+		WatcherDirectory *dir = directories[object_index];
 		// retrieve event data
 		Win32_DWORD bytes_transferred;
 		win32::getOverlappedResult(
@@ -75,28 +75,28 @@ fn int internal_xwatcher_process(void *argument) {
 			usz converted_chars = tmp.str_view().len-1; //account for null terminator
 
 			// convert to proper event type
-			XWatcherFileEvent send_event = XWatcherFileEvent.NONE;
+			WatcherFileEvent send_event = WatcherFileEvent.NONE;
 			switch (event.action) {
 				case FILE_ACTION_ADDED:
-					send_event = XWatcherFileEvent.CREATED;
+					send_event = WatcherFileEvent.CREATED;
 					break;
 				case FILE_ACTION_REMOVED:
-					send_event = XWatcherFileEvent.REMOVED;
+					send_event = WatcherFileEvent.REMOVED;
 					break;
 				case FILE_ACTION_MODIFIED:
-					send_event = XWatcherFileEvent.MODIFIED;
+					send_event = WatcherFileEvent.MODIFIED;
 					break;
 				case FILE_ACTION_RENAMED_OLD_NAME:
 				case FILE_ACTION_RENAMED_NEW_NAME:
-					send_event = XWatcherFileEvent.RENAMED;
+					send_event = WatcherFileEvent.RENAMED;
 					break;
 				default:
-					send_event = XWatcherFileEvent.UNSPECIFIED;
+					send_event = WatcherFileEvent.UNSPECIFIED;
 					break;
 			}
 
 			// find matching file (if any)
-			XWatcherFile *file = null;
+			WatcherFile *file = null;
 			for(usz j = 0; j < dir.files.len(); j++) {
 				usz test_file_name_len = dir.files[j].name.len();
 				if(converted_chars != test_file_name_len) {continue;}
@@ -108,7 +108,7 @@ fn int internal_xwatcher_process(void *argument) {
 
 			// file found(?)
 			if(file != null) {
-				if(send_event != XWatcherFileEvent.NONE) @pool() {
+				if(send_event != WatcherFileEvent.NONE) @pool() {
                     DString filepath;
                     filepath.init(tmem);
                     filepath.appendf("%s%c%s", dir.path, DIRBRK, file.name);
@@ -123,7 +123,7 @@ fn int internal_xwatcher_process(void *argument) {
 				io::printfn("FILE IS NULL? Expected '%s' Found: '%s'", name_char, dir.files.array_view());
 				// Cannot find file, lets try directory
 				if(dir.callback_func != null &&
-						send_event != XWatcherFileEvent.NONE) {
+						send_event != WatcherFileEvent.NONE) {
 					dir.callback_func(
 						send_event,
 						dir.path,
@@ -170,7 +170,7 @@ fn int internal_xwatcher_process(void *argument) {
 	}};
 	//cleanup here (TBD)... arena allocator looking nice rn..
 	for(usz i = 0; i < watcher.directories.len(); i++) {
-		XWatcherDirectory *directory = watcher.directories[i];
+		WatcherDirectory *directory = watcher.directories[i];
 		win32::closeHandle(directory.handle);
 	}
 	return 0;
