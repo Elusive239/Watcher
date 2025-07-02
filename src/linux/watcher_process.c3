@@ -45,7 +45,7 @@ fn int internal_xwatcher_process(void *argument) {
 
 			if(!directory){
 				// io::eprintn("MATCHING FILE DESCRIPTOR NOT FOUND! ERROR!");
-				continue;
+				break;
 				// BAIL????
 					//me. do we bail tho?
 			}
