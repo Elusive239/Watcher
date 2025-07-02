@@ -120,7 +120,7 @@ fn int internal_watcher_process(void *argument) {
 										file.additional_data);
 				};
 			}else {
-				io::printfn("FILE IS NULL? Expected '%s' Found: '%s'", name_char, dir.files.array_view());
+				// io::printfn("FILE IS NULL? Expected '%s' Found: '%s'", name_char, dir.files.array_view());
 				// Cannot find file, lets try directory
 				if(dir.callback_func != null &&
 						send_event != WatcherFileEvent.NONE) {

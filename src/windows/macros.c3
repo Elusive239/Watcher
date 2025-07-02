@@ -5,13 +5,14 @@ import std::os::win32;
 macro bool WatcherDirectory.createFile(&dir) {
 	// add directory path
 	dir.handle = win32::createFileA(
-			(ichar*)dir.path, //probably unsafe....
-			FILE_LIST_DIRECTORY,
-			FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
-			null,
-			OPEN_EXISTING,
-			FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED,
-			null);
+		(ichar*)dir.path, //probably unsafe....
+		FILE_LIST_DIRECTORY,
+		FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
+		null,
+		OPEN_EXISTING,
+		FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED,
+		null
+	);
 	if(dir.handle == win32::INVALID_HANDLE_VALUE) {
 		// get error code
 		Win32_DWORD error = win32::getLastError();

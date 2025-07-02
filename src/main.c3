@@ -40,12 +40,14 @@ fn void callback_func(WatcherFileEvent event,
 }
 
 
-fn int main(String[] args) 
+fn int main(String[] args)
 {
 	io::printn("Hello, Watcher!");
 	Watcher* watcher =  watcher::create_watcher();
 	defer watcher::destroy_watcher(watcher);
-	if(!watcher.watch("C:\\Users\\thoma\\Desktop\\XWatcherBindings\\.vscode\\settings.json", &callback_func, 1)) return 1;
+	if(!watcher.watch( args.len < 2 ? "C:\\Users\\thoma\\Desktop\\XWatcherBindings\\.vscode\\settings.json" : args[1], &callback_func, 1)) return 1;
+	if(!watcher.watch( "C:\\Users\\thoma\\Desktop\\XWatcherBindings\\src", &callback_func, 2)) return 1;
+	// if(!watcher.watch_path( ".\\.gitignore".to_path(tmem)!!, &callback_func, 1)) return 1;
 	io::printfn("appended something");
 	if(!watcher.start()) return 1;
 	if(args.len != 0) libc::getchar();

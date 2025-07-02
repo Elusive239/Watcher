@@ -34,7 +34,6 @@ enum WatcherFileEvent : usz {
 
 struct Watcher {
 	WatcherDirectoryList directories;
-	void*  thread; //pthread, check uses..
 	Thread        thread_id;
 	bool       alive;
 	int inotify_fd @if(env::LINUX); // fd == file descriptor (a common UNIX thing)
@@ -43,7 +42,6 @@ struct Watcher {
 struct WatcherDirectory {
 	// list of files
 	WatcherFileList files;
-
 	ZString         path;
 	// used for adding (additional) context in the handler (if needed)
 	int            context;
@@ -107,6 +105,29 @@ macro bool Watcher.watch(Watcher* watcher, path, WatcherCallbackFn callback_func
 	};
 	return append_reference(watcher, &ref);
 }
+
+// fn bool Watcher.watch_path(Watcher* watcher, Path path,WatcherCallbackFn callback_func = null, int context = 1) {
+// 	Path? abs = path.absolute(mem);
+// 	defer (void) abs.free();
+// 	if(catch err = abs) {
+// 		io::eprintfn("Error: %s", err);
+// 		return false;
+// 	}
+// 	WatcherReference reference = { 
+// 		.path = (ZString) abs.str_view(),
+// 		.callback_func = callback_func,
+// 		.context = context,
+// 	};
+
+// 	if(path::is_dir(abs)){
+// 		return append_directory(watcher,&reference);
+// 	}else if (path::is_file(abs)){
+// 		// todo("I'm working on it, m'kay?");
+// 		return append_file     (watcher,&reference);
+// 	}
+
+// 	return false;
+// }
 
 fn bool append_reference(Watcher* watcher, WatcherReference* reference) {
 	Path? path = reference.path.str_view().to_path(mem);

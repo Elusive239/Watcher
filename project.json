@@ -5,8 +5,6 @@
   "warnings": [ "no-unused" ],
   // Directories where C3 library files may be found.
   // "dependency-search-paths": [ "lib" ],
-  // Libraries to use for all targets.
-  // "dependencies": [ "xwatcher"],
   // Authors, optionally with email.
   "authors": [ "Elusive <github.com/Elusive239>", "Ash indigo <github.com/ashindigo>" ],
   // Version using semantic versioning.
@@ -14,7 +12,7 @@
   // Sources compiled for all targets.
   "sources": [ "src/**" ],
   // Test sources compiled for all targets.
-  "test-sources": [ "src/**" ], //NO REAL TESTING YET
+  "test-sources": [ "src/**" ],
   // C sources if the project also compiles C sources
   // relative to the project file.
   // "c-sources": [ "csource/**" ],
