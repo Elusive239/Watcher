@@ -93,51 +93,66 @@ fn Watcher *create_watcher() {
 	return watcher;
 }
 
+fn String? to_verified_path(String input) => @pool(){
+    Path path = {
+        .path_string =  path::normalize( input.copy(tmem))!,
+    };
+
+    if(!path.is_absolute()!){
+        path = path.absolute(tmem)!;
+    }
+
+    DString tmp = dstring::new_with_capacity(tmem, path.path_string.len+1);
+    tmp.appendf("%s\0",path.path_string);
+    return tmp.str_view().copy(mem);
+}
+
 <*
 	@require $typeof(path).typeid == ZString.typeid || $typeof(path).typeid == String.typeid || $defined(path.str_view)
 *>
 macro bool Watcher.watch(Watcher* watcher, path, WatcherCallbackFn callback_func = null, int context = 0, void* additional_data = null,) {
 	//back out early if the watcher is awake, prevents a crash..
 	if(watcher.alive) return false;
+	
+	$switch: 
+		$case $defined(path.str_view):
+		String inp = path.str_view();
+		$case $typeof(path).typeid == ZString.typeid:
+		String inp = (String) path[0:path.len()];
+		$case $typeof(path).typeid == String.typeid:
+		String inp = path;
+	$endswitch
 
-	$if $defined(path.str_view) == true:
-	WatcherReference ref = {
-		.path = (ZString) path.str_view(),
+	String? safe_path = to_verified_path(path);
+	if(catch err = safe_path) {
+		io::printfn("Got Err: %s", err);
+	}
+
+	WatcherReference ref = (WatcherReference){
+		.path = (ZString) safe_path!!,
 		.callback_func = callback_func,
 		.context = context,
 		.additional_data = additional_data,
 	};
-	$else 
-	WatcherReference ref = {
-		.path = (ZString) path,
-		.callback_func = callback_func,
-		.context = context,
-		.additional_data = additional_data,
-	};
-	$endif
+	
 	return append_reference(watcher, &ref);
 }
 
 fn bool append_reference(Watcher* watcher, WatcherReference* reference) {
-	Path? path = reference.path.str_view().to_path(mem);
-	defer (void) path.free();
-	if(catch err = path) {
-		io::eprintfn("Error: %s", err);
-		return false;
-	}
+	Path path = { .path_string = reference.path.str_view()};
 
 	if(path::is_dir(path)){
 		return append_directory(watcher,reference);
 	}else if (path::is_file(path)){
 		// todo("I'm working on it, m'kay?");
 		return append_file     (watcher,reference);
+	}else{
+		unreachable("How did we get here?");
 	}
-
-	return false;
 }
 
 fn bool append_file     (Watcher* watcher, WatcherReference* reference) {
-	String path = reference.path.str_view().copy(mem);
+	String path = reference.path.str_view();
 	//don't need to check for front slash here.. presumably...
 
 	String filename;
@@ -223,7 +238,7 @@ fn bool append_file     (Watcher* watcher, WatcherReference* reference) {
 }
 
 fn bool append_directory(Watcher* watcher, WatcherReference* reference) {
-	String path = reference.path.str_view().copy(mem);
+	String path = reference.path.str_view();
 	
 	// inotify only works with directories that do NOT have a front-slash
 	// at the end, so we have to make sure to cut that out

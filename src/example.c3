@@ -29,9 +29,9 @@ fn void callback_func(WatcherFileEvent event,
 
 fn int main(String[] args)
 {
-	String full_path =  args.len < 2 ? "C:\\Users\\thoma\\Desktop\\XWatcherBindings\\.vscode\\settings.json" : args[1];
+	String full_path = args.len < 2 ? ".\\.vscode\\" : args[1];
 
-	Watcher* watcher =  watcher::create_watcher();
+	Watcher* watcher = watcher::create_watcher();
 	defer watcher::destroy_watcher(watcher);
 	if(!watcher.watch(full_path, &callback_func,0, null)) return 1;
 	if(!watcher.start()) return 1;
