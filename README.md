@@ -74,7 +74,7 @@ fn void some_callback_fn(WatcherFileEvent event, ZString path, int context, void
 		// Linux only events
 		case WatcherFileEvent.OPENED:
 		case WatcherFileEvent.ATTRIBUTES_CHANGED:
-			io::printf("Got linux only event related to %s", path);
+			io::printf("Got a linux only event related to %s", path);
 			    
 		// Windows only events
 		case WatcherFileEvent.RENAMED:
