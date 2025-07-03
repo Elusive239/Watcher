@@ -11,7 +11,7 @@
   // Version using semantic versioning.
   "version": "0.1.0",
   // Sources compiled for all targets.
-  "sources": [ "src/**" ],
+  // "sources": [ "src/example.c3" ],
   // Test sources compiled for all targets.
   "test-sources": [ "src/**" ],
   // C sources if the project also compiles C sources
@@ -27,14 +27,21 @@
     "windows64": {
       // Executable or library.
       "type": "executable",
+      "target": "windows-x64",
+      "sources": [ "src/example.c3" ],
       // Additional libraries, sources
       // and overrides of global settings here.
-    },"linux64": {
-      // Executable or library.
+      },"linux64": {//so i can build for linux, check syntax errors etc
+        // Executable or library.
+        "type": "executable",
+        "target": "linux-x64",
+        "sources": [ "src/example.c3" ],
+      // Additional libraries, sources
+      // and overrides of global settings here.
+    },
+    "path_testing": {
       "type": "executable",
-      "target": "linux-x64",
-      // Additional libraries, sources
-      // and overrides of global settings here.
+      "sources": [ "src/path_testing.c3" ],
     },
   },
   // Global settings.
