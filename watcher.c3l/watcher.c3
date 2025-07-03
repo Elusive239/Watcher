@@ -96,7 +96,7 @@ fn Watcher *create_watcher() {
 <*
 	@require $typeof(path).typeid == ZString.typeid || $typeof(path).typeid == String.typeid || $defined(path.str_view)
 *>
-macro bool Watcher.watch(Watcher* watcher, path, WatcherCallbackFn callback_func = null, int context = 1) {
+macro bool Watcher.watch(Watcher* watcher, path, WatcherCallbackFn callback_func = null, void* additional_data = null, int context = 1) {
 	//back out early if the watcher is awake, prevents a crash..
 	if(watcher.alive) return false;
 
@@ -105,39 +105,18 @@ macro bool Watcher.watch(Watcher* watcher, path, WatcherCallbackFn callback_func
 		.path = (ZString) path.str_view(),
 		.callback_func = callback_func,
 		.context = context,
+		.additional_data = additional_data,
 	};
 	$else 
 	WatcherReference ref = {
 		.path = (ZString) path,
 		.callback_func = callback_func,
 		.context = context,
+		.additional_data = additional_data,
 	};
 	$endif
 	return append_reference(watcher, &ref);
 }
-
-// fn bool Watcher.watch_path(Watcher* watcher, Path path,WatcherCallbackFn callback_func = null, int context = 1) {
-// 	Path? abs = path.absolute(mem);
-// 	defer (void) abs.free();
-// 	if(catch err = abs) {
-// 		io::eprintfn("Error: %s", err);
-// 		return false;
-// 	}
-// 	WatcherReference reference = { 
-// 		.path = (ZString) abs.str_view(),
-// 		.callback_func = callback_func,
-// 		.context = context,
-// 	};
-
-// 	if(path::is_dir(abs)){
-// 		return append_directory(watcher,&reference);
-// 	}else if (path::is_file(abs)){
-// 		// todo("I'm working on it, m'kay?");
-// 		return append_file     (watcher,&reference);
-// 	}
-
-// 	return false;
-// }
 
 fn bool append_reference(Watcher* watcher, WatcherReference* reference) {
 	Path? path = reference.path.str_view().to_path(mem);

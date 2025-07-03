@@ -37,13 +37,16 @@ fn void callback_func(WatcherFileEvent event,
 
 fn int main(String[] args)
 {
+	String full_path =  args.len < 2 ? "C:\\Users\\thoma\\Desktop\\XWatcherBindings\\.vscode\\settings.json" : args[1];
+
 	Watcher* watcher =  watcher::create_watcher();
 	defer watcher::destroy_watcher(watcher);
-	if(!watcher.watch( args.len < 2 ? "C:\\Users\\thoma\\Desktop\\XWatcherBindings\\.vscode\\settings.json" : args[1], &callback_func, 1)) return 1;
+	if(!watcher.watch(full_path, &callback_func, null, context: 1)) return 1;
 	if(!watcher.start()) return 1;
 	if(args.len != 0) (void) io::stdin().read_byte();
 	return 0;
 }
 
-//just checks and sees if the example doesn't free all of the memory
+// just checks and sees if the example doesn't free all of the memory
+// run with "c3c test"!
 fn void test_mem() @test => main({});
