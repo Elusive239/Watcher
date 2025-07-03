@@ -25,7 +25,7 @@ I recommend looking at the [example](src/example.c3), it's pretty simple!
 If you don't want to look there:
 
 <details>
-<summary> <h2>Example Main</h2> </summary> 
+<summary> <h3>Example Main</h3> </summary> 
 
 ```
 fn int main()
@@ -55,7 +55,7 @@ the watch function also takes 2 additonal optional arguments that can be used ho
 </details>
 
 <details>
-<summary> <h2>Example Callback Function</h2> </summary>
+<summary> <h3>Example Callback Function</h3> </summary>
 
 ```
 fn void some_callback_fn(WatcherFileEvent event, ZString path, int context, void *data) {
