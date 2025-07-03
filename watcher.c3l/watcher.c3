@@ -96,6 +96,7 @@ fn Watcher *create_watcher() {
 fn String? to_verified_path(String input) => @pool(){
     Path path = {
         .path_string =  path::normalize( input.copy(tmem))!,
+		.env = env::WIN32 ? PathEnv.WIN32 : PathEnv.POSIX,
     };
 
     if(!path.is_absolute()!){
