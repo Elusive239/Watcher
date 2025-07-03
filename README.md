@@ -62,27 +62,27 @@ fn void some_callback_fn(WatcherFileEvent event, ZString path, int context, void
     // when an event is triggered, perform some action defined here.
     switch(event) {
         switch(event) {
-            // List of events available for every OS
+            	// List of events available for every OS
+		case WatcherFileEvent.NONE:
+			io::printf("Got no events!");
 
-		    case WatcherFileEvent.NONE:
-                io::printf("Got no events!");
+		case WatcherFileEvent.REMOVED:
+		case WatcherFileEvent.CREATED:
+		case WatcherFileEvent.MODIFIED:
+			io::printf("Got an event related to %s", path);
+		    
+		// Linux only events
+		case WatcherFileEvent.OPENED:
+		case WatcherFileEvent.ATTRIBUTES_CHANGED:
+			io::printf("Got linux only event related to %s", path);
+			    
+		// Windows only events
+		case WatcherFileEvent.RENAMED:
+			io::printf("Got a windows only event related to %s", path);
 
-		    case WatcherFileEvent.REMOVED:
-		    case WatcherFileEvent.CREATED:
-		    case WatcherFileEvent.MODIFIED:
-                io::printf("Got an event related to %s", path);
-		    
-            // Linux only events
-            case WatcherFileEvent.OPENED:
-		    case WatcherFileEvent.ATTRIBUTES_CHANGED:
-                io::printf("Got linux only event related to %s", path);
-		    
-            // Windows only events
-		    case WatcherFileEvent.RENAMED:
-                io::printf("Got a windows only event related to %s", path);
-		    default:
+		default:
 		    	io::printf("Unhandled event!");
-	    }
+	}
     }
 }
 ```
