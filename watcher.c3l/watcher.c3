@@ -96,7 +96,7 @@ fn Watcher *create_watcher() {
 <*
 	@require $typeof(path).typeid == ZString.typeid || $typeof(path).typeid == String.typeid || $defined(path.str_view)
 *>
-macro bool Watcher.watch(Watcher* watcher, path, WatcherCallbackFn callback_func = null, void* additional_data = null, int context = 1) {
+macro bool Watcher.watch(Watcher* watcher, path, WatcherCallbackFn callback_func = null, int context = 0, void* additional_data = null,) {
 	//back out early if the watcher is awake, prevents a crash..
 	if(watcher.alive) return false;
 
