@@ -104,14 +104,12 @@ fn String? to_verified_path(String input) => @pool(){
 		.env = env::WIN32 ? PathEnv.WIN32 : PathEnv.POSIX,
     };
 
-    io::printfn("Normalized Path: %s\0",path.path_string);
     if(!path.is_absolute()!){
         path = path.absolute(tmem)!;
     }
 
     DString tmp = dstring::new_with_capacity(tmem, path.path_string.len+1);
     tmp.appendf("%s\0",path.path_string);
-	io::printfn("Absolute Path: %s", tmp);
     return tmp.str_view().copy(mem);
 }
 
@@ -133,7 +131,7 @@ macro bool Watcher.watch(Watcher* watcher, path, WatcherCallbackFn callback_func
 
 	String? safe_path = to_verified_path(path);
 	if(catch err = safe_path) {
-		io::printfn("Got Err: %s", err);
+		io::eprintfn("Got Err: %s", err);
 	}
 
 	WatcherReference ref = (WatcherReference){
