@@ -4,7 +4,7 @@ A filesystem watcher written in [C3](https://c3-lang.org/), based off of [x-watc
 
 ~~Currently only works with full paths (limitation carryover from x-watcher). Support for other kinds of paths is in progress.~~
 
-Used a hacky solution but we have relative paths working.
+Used a hacky solution but we have relative paths working! Feels good.
 
 > [!WARNING]
 > This is an experimental library, with possibly unstable features. Use at your own risk.
