@@ -17,6 +17,7 @@ If someone wished to *add support* for another platform I would be obliged to ad
 ## Dependencies:  
 - C3 Standrd Library  
 - Linux Only: gcc-multilib  
+- Linux Only: inotify  
 
 ## To Use:
 
