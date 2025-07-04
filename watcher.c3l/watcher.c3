@@ -95,16 +95,18 @@ fn Watcher *create_watcher() {
 
 fn String? to_verified_path(String input) => @pool(){
     Path path = {
-        .path_string =  path::normalize( input.copy(tmem))!,
+        .path_string =  path::normalize( input.copy(tmem), env::WIN32 ? PathEnv.WIN32 : PathEnv.POSIX)!,
 		.env = env::WIN32 ? PathEnv.WIN32 : PathEnv.POSIX,
     };
 
+    io::printfn("Normalized Path: %s\0",path.path_string);
     if(!path.is_absolute()!){
         path = path.absolute(tmem)!;
     }
 
     DString tmp = dstring::new_with_capacity(tmem, path.path_string.len+1);
     tmp.appendf("%s\0",path.path_string);
+	io::printfn("Absolute Path: %s", tmp);
     return tmp.str_view().copy(mem);
 }
 
@@ -141,7 +143,7 @@ macro bool Watcher.watch(Watcher* watcher, path, WatcherCallbackFn callback_func
 
 fn bool append_reference(Watcher* watcher, WatcherReference* reference) {
 	Path path = { .path_string = reference.path.str_view()};
-
+	
 	if(path::is_dir(path)){
 		return append_directory(watcher,reference);
 	}else if (path::is_file(path)){
