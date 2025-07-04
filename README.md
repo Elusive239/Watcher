@@ -2,7 +2,9 @@
 
 A filesystem watcher written in [C3](https://c3-lang.org/), based off of [x-watcher](https://github.com/nikp123/x-watcher/tree/main) (created by [nikp123](https://github.com/nikp123)), a filesystem watcher written in C. 
 
-Currently only works with full paths (limitation carryover from x-watcher). Support for other kinds of paths is in progress.
+~~Currently only works with full paths (limitation carryover from x-watcher). Support for other kinds of paths is in progress.~~
+
+Used a hacky solution but we have relative paths working.
 
 > [!WARNING]
 > This is an experimental library, with possibly unstable features. Use at your own risk.
