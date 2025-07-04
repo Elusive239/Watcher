@@ -94,6 +94,11 @@ fn Watcher *create_watcher() {
 }
 
 fn String? to_verified_path(String input) => @pool(){
+
+	$if env::POSIX:
+		input = input.treplace("\\", "/");
+	$endif
+
     Path path = {
         .path_string =  path::normalize( input.copy(tmem), env::WIN32 ? PathEnv.WIN32 : PathEnv.POSIX)!,
 		.env = env::WIN32 ? PathEnv.WIN32 : PathEnv.POSIX,
